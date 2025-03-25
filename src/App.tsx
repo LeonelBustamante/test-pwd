@@ -1,13 +1,12 @@
-import { CopyOutlined } from "@ant-design/icons";
 import {
   Alert,
-  Button,
   Col,
+  Flex,
   Form,
   Image,
   Input,
   Layout,
-  message,
+  Menu,
   Row,
   Typography,
 } from "antd";
@@ -15,11 +14,12 @@ import { useState } from "react";
 
 const { Header, Content } = Layout;
 const { Item } = Form;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 function App() {
   const [password, setPassword] = useState("");
-  const [messageApi, contextHolder] = message.useMessage();
+  const [activeTab, setActiveTab] = useState("test");
+  const [constrasenaInsegura, setConstrasenaInsegura] = useState("");
 
   // Validaciones individuales
   const validations = {
@@ -40,75 +40,147 @@ function App() {
     !validations.symbol && "Debe contener al menos un símbolo.",
   ].filter(Boolean);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(password);
-      messageApi.success("Contraseña copiada al portapapeles");
-    } catch (err) {
-      messageApi.error("No se pudo copiar la contraseña");
+  const encriptarContrasena = (pwd: string) => {
+    let nuevaPwd = pwd;
+
+    // Elimina espacios en blanco al inicio y al final
+    nuevaPwd = nuevaPwd.trim();
+
+    // Pasamos a minúsculas
+    nuevaPwd = nuevaPwd.toLowerCase();
+
+    // Elimina espacios en blanco intermedios
+    nuevaPwd = nuevaPwd.replace(/\s+/g, "%");
+
+    // Pasamos letras con tilde a letras sin tilde
+    nuevaPwd = nuevaPwd.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const remplazos: Record<string, string> = {
+      a: "4",
+      e: "3",
+      i: "1",
+      o: "0",
+      s: "5",
+      g: "9",
+      t: "7",
+      q: "9",
+      z: "2",
+    };
+
+    let res = "";
+    for (let i = 0; i < nuevaPwd.length; i++) {
+      if (i === 0) {
+        res += nuevaPwd[i].toUpperCase();
+        continue;
+      }
+      const charActual = nuevaPwd[i];
+      const nuevoChar = remplazos[charActual] || charActual;
+      res += nuevoChar;
     }
+
+    return res;
   };
 
   return (
-    <>
-      {contextHolder}
-      <Layout style={{ height: "100vh", width: "100vw" }}>
-        <Header>
-          <Image src="/logo-white.svg" height="90%" preview={false} />
-        </Header>
-        <Content style={{ paddingTop: "4rem" }}>
-          <Row justify="center" align="middle">
-            <Col span={12}>
-              <Title level={1}>Test de contraseñas</Title>
-              <Form layout="vertical" size="large">
-                <Item label="Ingresa tu contraseña">
-                  <Input
-                    value={password}
-                    size="large"
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </Item>
-              </Form>
-
-              {/* Mostrar alertas si hay algo escrito */}
-              {password && (
-                <div style={{ marginTop: "1rem" }}>
-                  {missingRequirements.map((msg, index) => (
-                    <Alert
-                      key={index}
-                      message={msg}
-                      type="error"
-                      showIcon
-                      style={{ marginBottom: "0.5rem" }}
+    <Layout style={{ height: "100vh", width: "100vw" }}>
+      <Header>
+        <Flex
+          align="center"
+          justify="space-between"
+          style={{ height: "100%", width: "100%" }}
+        >
+          <Image src="/logo-white.svg" preview={false} width={100} />
+          <div>
+            <Menu
+              theme="dark"
+              mode="horizontal"
+              selectedKeys={[activeTab]}
+              onClick={({ key }) => setActiveTab(key)}
+              items={[
+                { key: "test", label: "Test contraseñas" },
+                { key: "generate", label: "Generar contraseña" },
+              ]}
+            />
+          </div>
+        </Flex>
+      </Header>
+      <Content style={{ paddingTop: "4rem" }}>
+        <Row justify="center" align="middle">
+          <Col span={12}>
+            {activeTab === "test" && (
+              <>
+                <Title level={1}>Test de contraseñas</Title>
+                <Form layout="vertical" size="large">
+                  <Item label="Ingresa tu contraseña">
+                    <Input
+                      value={password}
+                      size="large"
+                      onChange={(e) => setPassword(e.target.value)}
                     />
-                  ))}
+                  </Item>
+                </Form>
 
-                  {/* Si cumple todos los requisitos */}
-                  {allValid && (
-                    <>
+                {password && (
+                  <div style={{ marginTop: "1rem" }}>
+                    {missingRequirements.map((msg, index) => (
+                      <Alert
+                        key={index}
+                        message={msg}
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: "0.5rem" }}
+                      />
+                    ))}
+
+                    {allValid && (
                       <Alert
                         message="Contraseña segura"
                         description="Excelente. Cumple con todos los requisitos."
                         type="success"
                         showIcon
-                        style={{ marginBottom: "1rem" }}
                       />
-                      <Button
-                        icon={<CopyOutlined />}
-                        type="primary"
-                        onClick={handleCopy}
-                      >
-                        Copiar contraseña
-                      </Button>
-                    </>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {activeTab === "generate" && (
+              <>
+                <Title level={1}>Generador de contraseñas</Title>
+                <Form layout="vertical" size="large">
+                  <Item label="Ingresa tu nombre y apellido">
+                    <Input
+                      value={constrasenaInsegura}
+                      size="large"
+                      onChange={(e) => setConstrasenaInsegura(e.target.value)}
+                    />
+                  </Item>
+                </Form>
+                <div style={{ marginTop: "1rem" }}>
+                  {constrasenaInsegura.length > 0 && (
+                    <Alert
+                      message="Contraseña segura"
+                      description={
+                        <>
+                          <Text>Una contraseña segura podria ser:</Text>
+                          <Title level={5}>
+                            {encriptarContrasena(constrasenaInsegura)}{" "}
+                          </Title>
+                        </>
+                      }
+                      type="success"
+                      showIcon
+                      style={{ marginBottom: "1rem" }}
+                    />
                   )}
                 </div>
-              )}
-            </Col>
-          </Row>
-        </Content>
-      </Layout>
-    </>
+              </>
+            )}
+          </Col>
+        </Row>
+      </Content>
+    </Layout>
   );
 }
 
